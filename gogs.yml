@@ -1,0 +1,124 @@
+- hosts: localhost
+  become: yes
+  tasks:
+
+  - name: Update Yum
+    yum:
+      name: "*"
+      state: latest
+      
+  - name: Install MySQL-python
+    yum:
+      name: MySQL-python
+      state: latest
+
+  - name: Install nano
+    yum:
+      name:
+        - nano
+      state: latest
+        
+  - name: Install latest version of Apache
+    yum:
+      name: httpd
+      state: latest
+
+  - name: Open port 80
+    firewalld:
+      port: 80/tcp
+      permanent: true
+      state: enabled
+      immediate: yes
+
+  - name: Open port 443
+    firewalld:
+      port: 443/tcp
+      permanent: true
+      state: enabled
+
+  - name: Open port 3000
+    firewalld:
+      port: 3000/tcp
+      permanent: true
+      state: enabled
+
+  - name: Download Gogs from packer.io
+    get_url:
+      url: https://dl.packager.io/srv/pkgr/gogs/pkgr/installer/el/7.repo
+      dest: /etc/yum.repos.d/gogs.repo
+      
+  - name: Install latest version of gogs
+    yum:
+      name: gogs
+      state: latest 
+
+  - name: Configure HTTPD vhost to connect to gogs
+    blockinfile:
+      path: /etc/httpd/conf.d/gogs.conf
+      create: yes
+      block: |
+        [Unit]
+        Description=Gogs
+        After=syslog.target
+        After=network.target
+        After=mariadb.service mysqld.service postgresql.service memcached.service redis.service
+
+        [Service]
+        # Modify these two values and uncomment them if you have
+        # repos with lots of files and get an HTTP error 500 because
+        # of that
+        ###
+        #LimitMEMLOCK=infinity
+        #LimitNOFILE=65535
+        Type=simple
+        User=gogs
+        Group=gogs
+        WorkingDirectory=/opt/gogs
+        ExecStart=/opt/gogs/gogs web
+        Restart=always
+        Environment=USER=gogs HOME=/home/gogs
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - name: Install mariadb
+    yum:
+      name: mariadb-server
+      state: latest
+
+  - name: Starts mariadb (and enables start with VM)
+    systemd:
+      name: mariadb
+      state: started
+      enabled: yes
+
+  - name: Starts Apache (and enables start with VM)
+    systemd:
+      name: httpd
+      state: started
+      enabled: yes
+
+  - name: Starts gogs (and enables start with VM)
+    systemd:
+      name: gogs
+      state: started
+      enabled: yes
+      
+  - name: Set MariaDB root user password
+    mysql_user:
+      name: root
+      host: localhost
+      password: g0g5
+      check_implicit_admin: yes
+      login_user: root
+      state: present
+
+  - name: Create a new database with name 'gogs'
+    mysql_db:
+      login_host: localhost
+      login_user: root
+      login_password: g0g5
+      name: gogs
+      collation: utf8_general_ci
+      encoding: utf8
+      state: present
