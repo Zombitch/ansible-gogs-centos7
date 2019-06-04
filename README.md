@@ -12,6 +12,7 @@ Ansible software should be installed in centOS7. You can install it with the fol
 The following software will be installed :
 
 - Apache HTTPD
+- Nano
 - MariaDB
 - MySQL-Python
 - Gogs
