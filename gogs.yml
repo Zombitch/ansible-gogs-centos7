@@ -86,6 +86,10 @@
       name: mariadb-server
       state: latest
 
+  - name: Reload daemons
+    systemd:
+      daemon_reload: yes
+
   - name: Starts mariadb (and enables start with VM)
     systemd:
       name: mariadb
